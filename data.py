@@ -30,6 +30,43 @@ def data_loader(dataDir: str) -> NDArray:
 
     return pc_scores, exceed_vals
 
+class Scaler():
+    def __init__(self, pairedX: NDArray, y:NDArray):
+        self.pairedX = pairedX
+        self.y = y
+
+        self.numSves = 200
+        self.numRves = self.pairedX.shape[0]
+        self.numExceed = 56
+
+    def get_input_scaler(self):
+        from sklearn.preprocessing import StandardScaler
+
+        input_scaler = StandardScaler()
+        if self.pairedX.ndim == 3:
+            X = self.pairedX.reshape(self.numRves * self.numSves * self.numExceed, self.pairedX.shape[-1])
+        else:
+            X = self.pairedX
+
+        input_scaler.fit(X)
+
+        return input_scaler
+
+
+    def get_output_scaler(self):
+        from sklearn.preprocessing import StandardScaler
+
+        output_scaler = StandardScaler()
+        if self.y.ndim == 3:
+            y = self.y.reshape(self.numRves * self.numSves * self.numExceed,1)
+        else:
+            y = self.y
+
+        output_scaler.fit(y)
+
+        return output_scaler
+
+
 def getCnfData(data_dir: str, train_fraction: float,
                numRves: int, numSves:int, 
                numExceed: int, pc_scores_only: bool,
@@ -37,7 +74,7 @@ def getCnfData(data_dir: str, train_fraction: float,
 
     # i need to move datasets onto cuda before loading them onto train loader.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    pairedXLoc, _, pairedPcSc, pairedExceed = data_loader(data_dir) # these are of shape (15, 11400, dim)
+    pairedPcSc, pairedExceed = data_loader(data_dir) # these are of shape (15, 11400, dim)
 
     if pc_scores_only:
         print('returning features only with pc scores.')
@@ -58,7 +95,7 @@ def getCnfData(data_dir: str, train_fraction: float,
         numRves_copy = numRves.copy()
         testIdx = np.random.choice(numRves, size = 3, replace = False)
 
-        testIdx = [8 10 12] # to match the values used in the paper.
+        testIdx = [8, 10, 12] # to match the values used in the paper.
 
         # this is my rve-level 80-20 split.
         # sorry to alan turing for this sinful code block

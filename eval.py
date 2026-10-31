@@ -15,7 +15,8 @@ from scipy.stats import probplot
 from scipy.stats import wasserstein_distance
 import matplotlib.pyplot as plt
 
-# usage: python eval.py --ver 0 --model-type cnf --data-dir data --train-fraction 0.80 --pc-scores-only --num-epochs 250 --batch-size 8192
+# usage: python eval.py --ver 0 --model-type cnf --data-dir data --train-fraction 0.80
+#        \ --pc-scores-only --num-epochs 300 --batch-size 8192 --write-dir cnfEvalOut
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -44,7 +45,7 @@ def load_model(model_type, dim, cdim,
     if model_type == 'cnf':
         from flows import CNF # this version has a modified mlp with dropout
         # model settings are set to the parameters listed in the published paper.
-        return CNF(features=dim, context=cdim, hidden_features=(256,256,256), activation=nn.RELU, p_drop = 0.0)
+        return CNF(features=dim, context=cdim, hidden_features=(256,256,256), activation=nn.ReLU, p_drop = 0.0)
 
     raise ValueError(f'unknown model_type: {model_type}')
 
@@ -199,16 +200,8 @@ if __name__ == "__main__":
     import_modules(args.model_type) # exposes required methods
 
     if args.pc_scores_only:
-        pairedX = np.load(os.path.join(args.data_dir, 'pcScRvesSmBasisTiled.npy'))
-        exceedVals = np.load(os.path.join(args.data_dir, 'exceedValsRves99p.npy'))
-    elif args.glob:
-        pairedX = np.load(os.path.join(args.data_dir, 'pcScCrossCorrSmBTiled.npy'))
-        exceedVals = np.load(os.path.join(args.data_dir, 'exceedValsRves99p.npy'))
-    else:
-        pcSc = np.load(os.path.join(args.data_dir, 'pcScRvesSmBasisTiled.npy'))
-        cldMeans = np.load(os.path.join(args.data_dir, 'cldMeansTiled.npy'))
-        pairedX = np.concatenate((pcSc, cldMeans), axis = -1)
-        exceedVals = np.load(os.path.join(args.data_dir, 'exceedValsRves99p.npy'))
+        pairedX = np.load(os.path.join(args.data_dir, 'tiled_pc_scores.npy'))
+        exceedVals = np.load(os.path.join(args.data_dir, 'flattened_exc_vals.npy'))
 
     rveNumsTest = [8, 10, 12]
     rveNumsTrain = [0, 1, 2, 3, 4, 5, 7, 9, 11, 13, 14]
@@ -229,7 +222,9 @@ if __name__ == "__main__":
     #-------------------------------------------------------------------
     # main evaluation block
     #
-    d = '2026-09-16'
+    d = '2026-10-31'
+
+    os.makedirs(f'{args.write_dir}/{d}_{args.ver}', exist_ok = True)
 
     if args.model_type == 'cnf':
         _, test_loader, eval_loader, inverse_perm = getCnfData(data_dir=args.data_dir, train_fraction=args.train_fraction,
@@ -323,8 +318,3 @@ if __name__ == "__main__":
 
         #plot_moment_err(per_err_mean, args.write_dir, d, args.ver)
 
-
-        
-~
-~
-~
